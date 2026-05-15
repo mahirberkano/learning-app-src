@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"math"
 	"net/http"
@@ -16,8 +18,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+//go:embed static
+var staticFiles embed.FS
+
 var (
-	version = "0.1.0"
+	version = "0.2.0"
 
 	httpRequests = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -53,6 +58,8 @@ func main() {
 		Addr: redisAddr,
 	})
 
+	staticFS, _ := fs.Sub(staticFiles, "static")
+	http.Handle("/ui/", http.StripPrefix("/ui/", http.FileServer(http.FS(staticFS))))
 	http.HandleFunc("/", handleRoot)
 	http.HandleFunc("/healthz", handleHealthz)
 	http.HandleFunc("/load", handleLoad)

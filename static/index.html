@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee; padding: 2rem; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { color: #00d4aa; margin-bottom: 1.5rem; }
+        .card { background: #16213e; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+        .card h3 { color: #00d4aa; margin-bottom: 0.5rem; }
+        .status { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #1a1a2e; }
+        .status:last-child { border: none; }
+        .healthy { color: #00d4aa; }
+        .unhealthy { color: #ff6b6b; }
+        button { background: #e94560; color: #fff; border: none; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 1rem; margin-right: 0.5rem; margin-top: 0.5rem; }
+        button:hover { background: #c23152; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #load-result { margin-top: 1rem; padding: 1rem; background: #0f3460; border-radius: 6px; display: none; }
+        #log { margin-top: 1rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; background: #0f3460; border-radius: 6px; padding: 1rem; }
+        .log-entry { padding: 0.2rem 0; border-bottom: 1px solid #1a1a2e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Learning App</h1>
+
+        <div class="card">
+            <h3>Pod Info</h3>
+            <div class="status"><span>Hostname</span><span id="hostname">-</span></div>
+            <div class="status"><span>Version</span><span id="version">-</span></div>
+            <div class="status"><span>Go Version</span><span id="goversion">-</span></div>
+            <div class="status"><span>Redis</span><span id="redis">-</span></div>
+        </div>
+
+        <div class="card">
+            <h3>Load Generator</h3>
+            <p style="margin-bottom: 0.5rem; color: #aaa;">Burn CPU to trigger HPA scaling</p>
+            <button onclick="generateLoad('5s')">5s Load</button>
+            <button onclick="generateLoad('15s')">15s Load</button>
+            <button onclick="generateLoad('30s')">30s Load</button>
+            <div id="load-result"></div>
+        </div>
+
+        <div class="card">
+            <h3>Request Log</h3>
+            <p style="margin-bottom: 0.5rem; color: #aaa;">Refresh to see which pod responds (load balancing)</p>
+            <button onclick="fetchInfo()">Send Request</button>
+            <button onclick="autoRefresh()">Auto-refresh (2s)</button>
+            <button onclick="stopRefresh()">Stop</button>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval = null;
+
+        async function fetchInfo() {
+            try {
+                const res = await fetch('/');
+                const data = await res.json();
+                document.getElementById('hostname').textContent = data.hostname;
+                document.getElementById('version').textContent = data.version;
+                document.getElementById('goversion').textContent = data.goversion;
+                document.getElementById('redis').textContent = data.redis;
+                document.getElementById('redis').className = data.redis === 'connected' ? 'healthy' : 'unhealthy';
+
+                const log = document.getElementById('log');
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.textContent = `${new Date().toLocaleTimeString()} → ${data.hostname}`;
+                log.prepend(entry);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function generateLoad(duration) {
+            const resultDiv = document.getElementById('load-result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = `Generating load for ${duration}...`;
+            try {
+                const res = await fetch(`/load?duration=${duration}`);
+                const data = await res.json();
+                resultDiv.textContent = `Done! Burned ${data.burned_cores} cores for ${data.actual}`;
+            } catch (e) {
+                resultDiv.textContent = `Error: ${e.message}`;
+            }
+        }
+
+        function autoRefresh() {
+            if (refreshInterval) return;
+            refreshInterval = setInterval(fetchInfo, 2000);
+        }
+
+        function stopRefresh() {
+            clearInterval(refreshInterval);
+            refreshInterval = null;
+        }
+
+        fetchInfo();
+    </script>
+</body>
+</html>
