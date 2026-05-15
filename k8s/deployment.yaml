@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: learning-app
+  namespace: learning-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: learning-app
+  template:
+    metadata:
+      labels:
+        app: learning-app
+    spec:
+      containers:
+        - name: learning-app
+          image: learning-app:0.1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: learning-app-config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5

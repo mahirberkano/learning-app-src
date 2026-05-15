@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: learning-app-config
+  namespace: learning-app
+data:
+  REDIS_ADDR: "redis:6379"
